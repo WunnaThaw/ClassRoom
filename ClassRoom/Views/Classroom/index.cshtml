@@ -1,0 +1,127 @@
+﻿@{
+    ViewData["Title"] = "Homework Tracker";
+}
+
+<div class="container mt-3">
+    @* <h1>Homework Completion Tracker</h1> *@
+
+    <button id="resetButton" class="btn btn-danger mb-3">Reset All</button>
+
+    <div class="row" id="studentsContainer">
+        <div class="col-12 text-center" id="loadingMessage">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p>Loading student list...</p>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Wait until jQuery is loaded
+        $(document).ready(function () {
+            // Check if signalR is available
+            if (typeof signalR === 'undefined') {
+                console.error('SignalR not loaded! Loading from CDN...');
+                loadSignalR().then(initializeApp);
+            } else {
+                initializeApp();
+            }
+        });
+
+        // Function to load SignalR if not available
+        function loadSignalR() {
+            return new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js';
+                script.onload = resolve;
+                script.onerror = reject;
+                document.head.appendChild(script);
+            });
+        }
+
+        // Main application initialization
+        function initializeApp() {
+            const studentNames = ["Alice", "Bob", "Charlie", "Diana", "Eve", "Frank"];
+
+            // Initialize connection
+            const connection = new signalR.HubConnectionBuilder()
+                .withUrl("/classroomHub")
+                .configureLogging(signalR.LogLevel.Warning)
+                .build();
+
+            // Create buttons
+            function initializeButtons() {
+                const container = $("#studentsContainer");
+                container.empty();
+
+                for (let i = 0; i < studentNames.length; i++) {
+                    container.append(`
+                                <div class="col-md-3 mb-3">
+                                    <div class="card">
+                                        <div class="card-body text-center">
+                                            <h5 class="card-title">${studentNames[i]}</h5>
+                                            <button class="btn btn-light student-button"
+                                                    data-student-id="${i}">
+                                                Complete
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            `);
+                }
+
+                // Attach click handlers
+                $(".student-button").click(function () {
+                    const studentId = $(this).data("student-id");
+                    const isCompleted = $(this).hasClass("btn-success");
+                    connection.invoke("UpdateCompletionStatus", studentId, !isCompleted)
+                        .catch(err => console.error(err));
+                });
+            }
+
+            // Connection event handlers
+            // connection.on("UpdateStatus", (studentId, isCompleted) => {
+            //     const button = $(`button[data-student-id="${studentId}"]`);
+            //     button.toggleClass("btn-light btn-success", isCompleted);
+            //     button.text(isCompleted ? "Completed" : "Complete");
+            // });
+            connection.on("UpdateStatus", (studentId, isCompleted) => {
+                const button = $(`button[data-student-id="${studentId}"]`);
+                if (isCompleted) {
+                    button.removeClass("btn-light").addClass("btn-success");
+                } else {
+                    button.removeClass("btn-success").addClass("btn-light");
+                }
+                button.text(isCompleted ? "Completed" : "Complete");
+            });
+
+            connection.on("ResetAll", () => {
+                $(".student-button").removeClass("btn-success").addClass("btn-light");
+                $(".student-button").text("Complete");
+            });
+
+            // Start connection
+            connection.start()
+                .then(() => {
+                    $("#loadingMessage").remove();
+                    initializeButtons();
+                    console.log("SignalR Connected.");
+                })
+                .catch(err => {
+                    console.error("Connection failed:", err);
+                    $("#loadingMessage p").text("Connection error. Refresh the page.");
+                });
+
+            // Reset button handler
+            $("#resetButton").click(function () {
+                connection.invoke("ResetAllStatuses")
+                    .catch(err => console.error(err));
+            });
+
+            // Initialize buttons immediately
+            initializeButtons();
+        }
+    </script>
+}
