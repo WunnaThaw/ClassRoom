@@ -3,9 +3,11 @@
 }
 
 <div class="container mt-3">
-    @* <h1>Homework Completion Tracker</h1> *@
-
-    <button id="resetButton" class="btn btn-danger mb-3">Reset All</button>
+    <div class="mb-3">
+        <button id="resetButton" class="btn btn-danger">Reset All</button>
+        <a asp-controller="Student" asp-action="Manage" class="btn btn-primary ms-2">Edit Students</a>
+    </div>
+    
 
     <div class="row" id="studentsContainer">
         <div class="col-12 text-center" id="loadingMessage">
@@ -18,110 +20,74 @@
 </div>
 
 @section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
     <script>
-        // Wait until jQuery is loaded
         $(document).ready(function () {
-            // Check if signalR is available
-            if (typeof signalR === 'undefined') {
-                console.error('SignalR not loaded! Loading from CDN...');
-                loadSignalR().then(initializeApp);
-            } else {
-                initializeApp();
-            }
+            initializeApp();
         });
 
-        // Function to load SignalR if not available
-        function loadSignalR() {
-            return new Promise((resolve, reject) => {
-                const script = document.createElement('script');
-                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js';
-                script.onload = resolve;
-                script.onerror = reject;
-                document.head.appendChild(script);
-            });
-        }
-
-        // Main application initialization
         function initializeApp() {
-            const studentNames = ["Alice", "Bob", "Charlie", "Diana", "Eve", "Frank"];
-
-            // Initialize connection
             const connection = new signalR.HubConnectionBuilder()
                 .withUrl("/classroomHub")
-                .configureLogging(signalR.LogLevel.Warning)
+                .configureLogging(signalR.LogLevel.Information)
                 .build();
 
-            // Create buttons
-            function initializeButtons() {
+            function refreshStudentUI(students) {
+                $("#loadingMessage").remove();
                 const container = $("#studentsContainer");
                 container.empty();
 
-                for (let i = 0; i < studentNames.length; i++) {
-                    container.append(`
-                                <div class="col-md-3 mb-3">
-                                    <div class="card">
-                                        <div class="card-body text-center">
-                                            <h5 class="card-title">${studentNames[i]}</h5>
-                                            <button class="btn btn-light student-button"
-                                                    data-student-id="${i}">
-                                                Complete
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            `);
+                if (students.length === 0) {
+                    container.html('<div class="col-12 text-center text-muted">No students found</div>');
+                    return;
                 }
 
-                // Attach click handlers
-                $(".student-button").click(function () {
+                students.forEach((name, index) => {
+                    container.append(`
+                        <div class="col-md-3 mb-3">
+                            <div class="card">
+                                <div class="card-body text-center">
+                                    <h5 class="card-title">${name}</h5>
+                                    <button class="btn btn-light student-button"
+                                            data-student-id="${index}">
+                                        Complete
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `);
+                });
+
+                $(".student-button").off('click').on('click', function() {
                     const studentId = $(this).data("student-id");
-                    const isCompleted = $(this).hasClass("btn-success");
-                    connection.invoke("UpdateCompletionStatus", studentId, !isCompleted)
+                    connection.invoke("UpdateCompletionStatus", studentId, true)
                         .catch(err => console.error(err));
                 });
             }
 
-            // Connection event handlers
-            // connection.on("UpdateStatus", (studentId, isCompleted) => {
-            //     const button = $(`button[data-student-id="${studentId}"]`);
-            //     button.toggleClass("btn-light btn-success", isCompleted);
-            //     button.text(isCompleted ? "Completed" : "Complete");
-            // });
+            connection.on("ReloadStudents", refreshStudentUI);
             connection.on("UpdateStatus", (studentId, isCompleted) => {
                 const button = $(`button[data-student-id="${studentId}"]`);
-                if (isCompleted) {
-                    button.removeClass("btn-light").addClass("btn-success");
-                } else {
-                    button.removeClass("btn-success").addClass("btn-light");
-                }
-                button.text(isCompleted ? "Completed" : "Complete");
+                button.toggleClass("btn-light", !isCompleted)
+                      .toggleClass("btn-success", isCompleted)
+                      .text(isCompleted ? "Completed" : "Complete");
             });
 
             connection.on("ResetAll", () => {
-                $(".student-button").removeClass("btn-success").addClass("btn-light");
-                $(".student-button").text("Complete");
+                $(".student-button").removeClass("btn-success").addClass("btn-light").text("Complete");
             });
 
-            // Start connection
             connection.start()
-                .then(() => {
-                    $("#loadingMessage").remove();
-                    initializeButtons();
-                    console.log("SignalR Connected.");
-                })
+                .then(() => connection.invoke("GetCurrentStudents"))
                 .catch(err => {
-                    console.error("Connection failed:", err);
+                    console.error("Connection error:", err);
                     $("#loadingMessage p").text("Connection error. Refresh the page.");
                 });
 
-            // Reset button handler
-            $("#resetButton").click(function () {
+            $("#resetButton").click(() => {
                 connection.invoke("ResetAllStatuses")
                     .catch(err => console.error(err));
             });
-
-            // Initialize buttons immediately
-            initializeButtons();
         }
     </script>
 }

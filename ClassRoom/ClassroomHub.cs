@@ -1,60 +1,34 @@
 ﻿using Microsoft.AspNetCore.SignalR;
-using System.Collections.Concurrent;
 using System.Text.Json;
 
-namespace ClassRoom
+namespace ClassRoom.Hubs
 {
     public class ClassroomHub : Hub
     {
-        // Store completion status in memory
-        private static ConcurrentDictionary<int, bool> _completionStatus = new ConcurrentDictionary<int, bool>();
-        private static List<string> _studentNames;
-
-        // List of student names (could be made configurable)
-        //private static List<string> _studentNames = new List<string>
-        //{
-        //    "Alice", "Bob", "Charlie", "Diana", "Eve", "Frank"
-        //};
-
-        static ClassroomHub()
+        public async Task GetCurrentStudents()
         {
+            List<string> students;
+
             try
             {
-                string json = File.ReadAllText("Data/students.json");
-                _studentNames = JsonSerializer.Deserialize<List<string>>(json) ?? new List<string>();
+                var json = System.IO.File.ReadAllText("Data/students.json");
+                students = JsonSerializer.Deserialize<List<string>>(json) ?? new List<string>();
             }
             catch
             {
-                _studentNames = new List<string> { "Student1", "Student2", "Student3" };
-            }
-        }
-
-        public override async Task OnConnectedAsync()
-        {
-            // Initialize status for all students if not already set
-            for (int i = 0; i < _studentNames.Count; i++)
-            {
-                _completionStatus.TryAdd(i, false);
+                students = new List<string> { };
             }
 
-            // Send current status to the newly connected client
-            await Clients.Caller.SendAsync("InitializeStatuses", _completionStatus);
-
-            await base.OnConnectedAsync();
+            await Clients.Caller.SendAsync("ReloadStudents", students);
         }
 
         public async Task UpdateCompletionStatus(int studentId, bool isCompleted)
         {
-            _completionStatus[studentId] = isCompleted;
             await Clients.All.SendAsync("UpdateStatus", studentId, isCompleted);
         }
 
         public async Task ResetAllStatuses()
         {
-            foreach (var key in _completionStatus.Keys.ToList())
-            {
-                _completionStatus[key] = false;
-            }
             await Clients.All.SendAsync("ResetAll");
         }
     }

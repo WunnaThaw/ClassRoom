@@ -1,3 +1,5 @@
+using ClassRoom.Hubs;
+
 namespace ClassRoom
 {
     public class Program
