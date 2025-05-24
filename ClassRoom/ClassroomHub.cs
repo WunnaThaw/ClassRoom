@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.SignalR;
 using System.Collections.Concurrent;
+using System.Text.Json;
 
 namespace ClassRoom
 {
@@ -7,12 +8,26 @@ namespace ClassRoom
     {
         // Store completion status in memory
         private static ConcurrentDictionary<int, bool> _completionStatus = new ConcurrentDictionary<int, bool>();
+        private static List<string> _studentNames;
 
         // List of student names (could be made configurable)
-        private static List<string> _studentNames = new List<string>
-    {
-        "Alice", "Bob", "Charlie", "Diana", "Eve", "Frank"
-    };
+        //private static List<string> _studentNames = new List<string>
+        //{
+        //    "Alice", "Bob", "Charlie", "Diana", "Eve", "Frank"
+        //};
+
+        static ClassroomHub()
+        {
+            try
+            {
+                string json = File.ReadAllText("Data/students.json");
+                _studentNames = JsonSerializer.Deserialize<List<string>>(json) ?? new List<string>();
+            }
+            catch
+            {
+                _studentNames = new List<string> { "Student1", "Student2", "Student3" };
+            }
+        }
 
         public override async Task OnConnectedAsync()
         {
