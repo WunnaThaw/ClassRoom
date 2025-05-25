@@ -19,10 +19,20 @@
     </div>
 
     <div class="mt-4">
-        <div class="d-flex align-items-center mb-2">
+        <div class="d-flex align-items-center justify-content-between mb-2">
             <h4 class="mb-0">Group Chat</h4>
-            <input type="text" id="usernameInput" class="form-control ms-2" style="max-width: 200px;" placeholder="Your name" />
+
+            <div class="d-flex align-items-center">
+                <input type="text" id="usernameInput" class="form-control me-2" style="max-width: 180px;" placeholder="Your name" />
+
+                <select id="avatarStyleSelect" class="form-select" style="max-width: 140px;">
+                    <option value="thumbs">Thumbs</option>
+                    <option value="bottts" selected>Bottts</option>
+                    <option value="adventurer">Adventurer</option>
+                </select>
+            </div>
         </div>
+
 
         <div id="chatBox" class="border p-3" style="height: 250px; overflow-y: auto; background-color: #f8f9fa;"></div>
         <div class="input-group mb-2">
@@ -109,18 +119,24 @@
                 return styles[index];
             }
 
-            connection.on("ReceiveMessage", (sender, message) => {
+             connection.on("ReceiveMessage", (sender, message) => {
                 const now = new Date();
                 const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
                 const safeMessage = escapeHtml(message).replace(/\n/g, "<br>");
 
                 let senderId = sender;
+                let avatarStyle = "thumbs";
+
+                // If anonymous → use random style + id
                 if (sender.toLowerCase() === "anonymous") {
-                    senderId = sender + Math.floor(Math.random() * 100000);  // make each anonymous unique
+                    senderId = sender + Math.floor(Math.random() * 100000);
+                    const styles = ["thumbs", "bottts", "adventurer"];
+                    avatarStyle = styles[Math.floor(Math.random() * styles.length)];
+                } else {
+                    // Else → use selected style
+                    avatarStyle = $("#avatarStyleSelect").val();
                 }
 
-                const avatarStyle = getRandomStyle();  // 👈 random style!
                 const avatarUrl = `https://api.dicebear.com/8.x/${avatarStyle}/svg?seed=${encodeURIComponent(senderId)}`;
 
                 const chatBox = $("#chatBox");
@@ -129,9 +145,9 @@
                         <img src="${avatarUrl}" alt="${sender}" class="me-2"
                              style="width: 40px; height: 40px; border-radius: 50%;" />
                         <div class="flex-grow-1 p-2 rounded border bg-white shadow-sm">
-                            <div class="d-flex justify-content-between align-items-center mb-1">
+                            <div class="d-flex align-items-center mb-1">
                                 <strong>${sender}:</strong>
-                                <span class="text-muted" style="font-size: 0.85em;">${timeStr}</span>
+                                <span class="text-muted ms-2" style="font-size: 0.85em;">${timeStr}</span>
                             </div>
                             <div>${safeMessage}</div>
                         </div>
@@ -140,6 +156,7 @@
 
                 chatBox.scrollTop(chatBox[0].scrollHeight);
             });
+
 
 
 
