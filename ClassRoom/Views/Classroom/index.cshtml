@@ -103,25 +103,41 @@
                 $(".student-button").removeClass("btn-success").addClass("btn-light").text("Complete");
             });
 
+            function getInitials(name) {
+                return name
+                    .split(" ")
+                    .map(word => word[0].toUpperCase())
+                    .join("")
+                    .slice(0, 2);
+            }
+
             connection.on("ReceiveMessage", (sender, message) => {
                 const now = new Date();
                 const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
                 const safeMessage = escapeHtml(message).replace(/\n/g, "<br>");
+                const initials = getInitials(sender);
 
                 const chatBox = $("#chatBox");
                 chatBox.append(`
-                    <div class="p-2 mb-2 rounded border bg-white shadow-sm">
-                        <div class="d-flex align-items-center">
-                            <strong>${sender}:</strong>
-                            <span class="ms-2 text-muted" style="font-size: 0.85em;">${timeStr}</span>
+                    <div class="d-flex mb-3">
+                        <div class="avatar-circle bg-primary text-white d-flex align-items-center justify-content-center me-2"
+                             style="width: 40px; height: 40px; border-radius: 50%; font-weight: bold;">
+                            ${initials}
                         </div>
-                        <div>${safeMessage}</div>
+                        <div class="flex-grow-1 p-2 rounded border bg-white shadow-sm">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <strong>${sender}:</strong>
+                                <span class="text-muted" style="font-size: 0.85em;">${timeStr}</span>
+                            </div>
+                            <div>${safeMessage}</div>
+                        </div>
                     </div>
                 `);
 
                 chatBox.scrollTop(chatBox[0].scrollHeight);
             });
+
 
             $("#sendChat").click(() => {
                 const message = $("#chatInput").val();
