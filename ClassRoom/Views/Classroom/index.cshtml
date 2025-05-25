@@ -17,6 +17,19 @@
             <p>Loading student list...</p>
         </div>
     </div>
+
+    <div class="mt-4">
+        <div class="d-flex align-items-center mb-2">
+            <h4 class="mb-0">Group Chat</h4>
+            <input type="text" id="usernameInput" class="form-control ms-2" style="max-width: 200px;" placeholder="Your name" />
+        </div>
+
+        <div id="chatBox" class="border p-3" style="height: 250px; overflow-y: auto; background-color: #f8f9fa;"></div>
+        <div class="input-group mb-2">
+            <textarea id="chatInput" class="form-control" rows="3" placeholder="Type your message..."></textarea>
+            <button id="sendChat" class="btn btn-primary ms-2">Send</button>
+        </div>
+    </div>
 </div>
 
 @section Scripts {
@@ -25,6 +38,15 @@
         $(document).ready(function () {
             initializeApp();
         });
+
+        function escapeHtml(unsafe) {
+            return unsafe
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
 
         function initializeApp() {
             const connection = new signalR.HubConnectionBuilder()
@@ -79,6 +101,37 @@
 
             connection.on("ResetAll", () => {
                 $(".student-button").removeClass("btn-success").addClass("btn-light").text("Complete");
+            });
+
+            connection.on("ReceiveMessage", (sender, message) => {
+                const now = new Date();
+                const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+                const safeMessage = escapeHtml(message).replace(/\n/g, "<br>");
+
+                const chatBox = $("#chatBox");
+                chatBox.append(`
+                    <div class="p-2 mb-2 rounded border bg-white shadow-sm">
+                        <div class="d-flex align-items-center">
+                            <strong>${sender}:</strong>
+                            <span class="ms-2 text-muted" style="font-size: 0.85em;">${timeStr}</span>
+                        </div>
+                        <div>${safeMessage}</div>
+                    </div>
+                `);
+
+                chatBox.scrollTop(chatBox[0].scrollHeight);
+            });
+
+            $("#sendChat").click(() => {
+                const message = $("#chatInput").val();
+                const sender = $("#usernameInput").val().trim() || "Anonymous";
+
+                if (message.trim() !== "") {
+                    connection.invoke("SendMessage", sender, message)
+                        .catch(err => console.error(err));
+                    $("#chatInput").val("");
+                }
             });
 
 

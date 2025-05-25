@@ -42,6 +42,11 @@ namespace ClassRoom.Hubs
             await Clients.All.SendAsync("ResetAll");
         }
 
+        public async Task SendMessage(string sender, string message)
+        {
+            await Clients.All.SendAsync("ReceiveMessage", sender, message);
+        }
+
         private List<Student> LoadStudents()
         {
             try
