@@ -103,12 +103,10 @@
                 $(".student-button").removeClass("btn-success").addClass("btn-light").text("Complete");
             });
 
-            function getInitials(name) {
-                return name
-                    .split(" ")
-                    .map(word => word[0].toUpperCase())
-                    .join("")
-                    .slice(0, 2);
+            function getRandomStyle() {
+                const styles = ["thumbs", "bottts", "adventurer"];
+                const index = Math.floor(Math.random() * styles.length);
+                return styles[index];
             }
 
             connection.on("ReceiveMessage", (sender, message) => {
@@ -116,15 +114,20 @@
                 const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
                 const safeMessage = escapeHtml(message).replace(/\n/g, "<br>");
-                const initials = getInitials(sender);
+
+                let senderId = sender;
+                if (sender.toLowerCase() === "anonymous") {
+                    senderId = sender + Math.floor(Math.random() * 100000);  // make each anonymous unique
+                }
+
+                const avatarStyle = getRandomStyle();  // 👈 random style!
+                const avatarUrl = `https://api.dicebear.com/8.x/${avatarStyle}/svg?seed=${encodeURIComponent(senderId)}`;
 
                 const chatBox = $("#chatBox");
                 chatBox.append(`
                     <div class="d-flex mb-3">
-                        <div class="avatar-circle bg-primary text-white d-flex align-items-center justify-content-center me-2"
-                             style="width: 40px; height: 40px; border-radius: 50%; font-weight: bold;">
-                            ${initials}
-                        </div>
+                        <img src="${avatarUrl}" alt="${sender}" class="me-2"
+                             style="width: 40px; height: 40px; border-radius: 50%;" />
                         <div class="flex-grow-1 p-2 rounded border bg-white shadow-sm">
                             <div class="d-flex justify-content-between align-items-center mb-1">
                                 <strong>${sender}:</strong>
@@ -137,6 +140,7 @@
 
                 chatBox.scrollTop(chatBox[0].scrollHeight);
             });
+
 
 
             $("#sendChat").click(() => {
