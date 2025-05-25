@@ -1,10 +1,11 @@
-﻿@model List<string>
+﻿@model List<ClassRoom.Models.Student>
+
 @{
     ViewData["Title"] = "Manage Students";
 }
 
-<div class="container mt-5">
-    <h1>Manage Students</h1>
+<div class="container mt-3">
+    <h2>Manage Students</h2>
 
     <form asp-action="Save" method="post" id="studentForm">
         <div id="students-container">
@@ -12,7 +13,8 @@
             {
                 <div class="row mb-2 student-row">
                     <div class="col-10">
-                        <input type="text" name="[@i]" value="@Model[i]" class="form-control" />
+                        <input type="hidden" name="[@i].Id" value="@Model[i].Id" />
+                        <input type="text" name="[@i].Name" value="@Model[i].Name" class="form-control" />
                     </div>
                     <div class="col-2">
                         <button type="button" class="btn btn-danger remove-student">Remove</button>
@@ -39,10 +41,12 @@
 
             $("#add-student").click(function () {
                 const index = $(".student-row").length;
+                const newGuid = crypto.randomUUID();
                 $("#students-container").append(`
                     <div class="row mb-2 student-row">
                         <div class="col-10">
-                            <input type="text" name="[${index}]" class="form-control" />
+                            <input type="hidden" name="[${index}].Id" value="${newGuid}" />
+                            <input type="text" name="[${index}].Name" class="form-control" />
                         </div>
                         <div class="col-2">
                             <button type="button" class="btn btn-danger remove-student">Remove</button>
@@ -53,10 +57,16 @@
 
             $(document).on("click", ".remove-student", function () {
                 $(this).closest(".student-row").remove();
+
                 $(".student-row").each(function (index) {
-                    $(this).find("input").attr("name", `[${index}]`);
+                    const idInput = $(this).find("input[type='hidden']");
+                    const nameInput = $(this).find("input[type='text']");
+
+                    idInput.attr("name", `[${index}].Id`);
+                    nameInput.attr("name", `[${index}].Name`);
                 });
             });
         });
     </script>
 }
+

@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.SignalR;
 using System.Text.Json;
 using ClassRoom.Hubs;
+using ClassRoom.Models;
 
 namespace ClassRoom.Controllers
 {
@@ -21,28 +22,51 @@ namespace ClassRoom.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Save(List<string> students)
+        public async Task<IActionResult> Save(List<Student> submittedStudents)
         {
-            students = students.Where(s => !string.IsNullOrWhiteSpace(s)).ToList();
+            if (submittedStudents == null)
+                submittedStudents = new List<Student>();
 
-            var json = JsonSerializer.Serialize(students);
+            var existingStudents = LoadStudents();
+
+            var updatedStudents = submittedStudents
+                .Where(s => !string.IsNullOrWhiteSpace(s.Name))
+                .Select(s =>
+                {
+                    var existing = existingStudents.FirstOrDefault(x => x.Id == s.Id);
+                    return new Student
+                    {
+                        Id = s.Id == Guid.Empty ? Guid.NewGuid() : s.Id,
+                        Name = s.Name.Trim(),
+                        IsCompleted = existing?.IsCompleted ?? false
+                    };
+                })
+                .ToList();
+
+            var json = JsonSerializer.Serialize(updatedStudents, new JsonSerializerOptions { WriteIndented = true });
             System.IO.File.WriteAllText("Data/students.json", json);
 
-            await _hubContext.Clients.All.SendAsync("ReloadStudents", students);
+            await _hubContext.Clients.All.SendAsync("ReloadStudents", updatedStudents);
+
             return RedirectToAction("Index", "Classroom");
         }
 
-        private List<string> LoadStudents()
+        private List<Student> LoadStudents()
         {
             try
             {
                 var json = System.IO.File.ReadAllText("Data/students.json");
-                return JsonSerializer.Deserialize<List<string>>(json) ?? new List<string>();
+                return JsonSerializer.Deserialize<List<Student>>(json) ?? new List<Student>();
             }
             catch
             {
-                return new List<string> { "Alice", "Bob", "Charlie" };
+                return new List<Student> {
+                    new Student { Name = "Alice", IsCompleted = false },
+                    new Student { Name = "Bob", IsCompleted = false },
+                    new Student { Name = "Charlie", IsCompleted = false }
+                };
             }
         }
+
     }
 }

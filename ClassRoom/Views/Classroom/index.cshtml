@@ -42,15 +42,15 @@
                     return;
                 }
 
-                students.forEach((name, index) => {
+                students.forEach((student, index) => {
                     container.append(`
                         <div class="col-md-3 mb-3">
                             <div class="card">
                                 <div class="card-body text-center">
-                                    <h5 class="card-title">${name}</h5>
-                                    <button class="btn btn-light student-button"
-                                            data-student-id="${index}">
-                                        Complete
+                                    <h5 class="card-title">${student.name}</h5>
+                                    <button class="btn ${student.isCompleted ? "btn-success" : "btn-light"} student-button"
+                                            data-student-id="${student.id}">
+                                        ${student.isCompleted ? "Completed" : "Complete"}
                                     </button>
                                 </div>
                             </div>
@@ -58,24 +58,29 @@
                     `);
                 });
 
-                $(".student-button").off('click').on('click', function() {
+
+                $(".student-button").off('click').on('click', function () {
                     const studentId = $(this).data("student-id");
                     connection.invoke("UpdateCompletionStatus", studentId, true)
-                        .catch(err => console.error(err));
+                        .catch(err => console.error("Update error:", err));
                 });
             }
 
-            connection.on("ReloadStudents", refreshStudentUI);
+            connection.on("ReloadStudents", (students) => {
+                refreshStudentUI(students);
+            });
+
             connection.on("UpdateStatus", (studentId, isCompleted) => {
                 const button = $(`button[data-student-id="${studentId}"]`);
                 button.toggleClass("btn-light", !isCompleted)
-                      .toggleClass("btn-success", isCompleted)
-                      .text(isCompleted ? "Completed" : "Complete");
+                        .toggleClass("btn-success", isCompleted)
+                        .text(isCompleted ? "Completed" : "Complete");
             });
 
             connection.on("ResetAll", () => {
                 $(".student-button").removeClass("btn-success").addClass("btn-light").text("Complete");
             });
+
 
             connection.start()
                 .then(() => connection.invoke("GetCurrentStudents"))

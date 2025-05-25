@@ -1,1 +1,17 @@
-["Alice","Bob","Charlie","Diana","Eve"]
+[
+  {
+    "Id": "88909b9e-d39f-4fb6-a21a-4501709b8e2a",
+    "Name": "Alice",
+    "IsCompleted": true
+  },
+  {
+    "Id": "70105adf-69d1-4fa7-ba6e-c48eeccb949a",
+    "Name": "Bob",
+    "IsCompleted": false
+  },
+  {
+    "Id": "865f50f6-2380-4837-90d1-d93fdd31221e",
+    "Name": "Charlie",
+    "IsCompleted": false
+  }
+]
